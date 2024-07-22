@@ -18,8 +18,7 @@ df <-
     email = stringr::str_squish(stringr::str_to_lower(email)),
     time = readr::parse_number(time)
   ) |>
-  # NOTE: Remove `group` column, add from the `groups` sheet and relocate it
-  # after the `time` column
+  # NOTE: Remove `group` column, add from the `groups` sheet
   dplyr::select(
     -group
   ) |>
@@ -27,8 +26,14 @@ df <-
     y = readxl::read_xlsx("./data/aux_data/groups.xlsx"),
     by = dplyr::join_by(email == email)
   ) |>
-  dplyr::relocate(
-    group,
+  # NOTE: Recode and relocate it after the `time` column
+  dplyr::mutate(
+    group = dplyr::case_match(
+      group,
+      "gcbt" ~ "GCBT",
+      "thrive" ~ "App",
+      "waiting_list" ~ "WL"
+    ),
     .after = time
   ) |>
   # NOTE: Calculate total scores for PHQ-9, GAD-7 and UCLA-3
@@ -95,6 +100,26 @@ pre_post <- df |>
   # NOTE: Transform time to dichotomous column (0: pre; 1: post)
   dplyr::mutate(
     time = dplyr::if_else(time > 0, 1, time)
+  ) |>
+  # NOTE: Change specific instrument columns to `outcome` and `score` columns
+  tidyr::pivot_longer(
+    cols = c(phq, gad, ucla),
+    names_to = "outcome",
+    values_to = "score",
+    names_transform = \(x) {
+      dplyr::case_match(
+        x,
+        "phq" ~ "PHQ-9",
+        "gad" ~ "GAD-7",
+        "ucla" ~ "UCLA-3"
+      )
+    }
+  ) |>
+  # NOTE: Transform `time` and `score` columns into `pre` and `post` columns
+  tidyr::pivot_wider(
+    names_from = "time",
+    values_from = "score",
+    names_glue = "{dplyr::if_else(time == 0, 'pre', 'post')}"
   )
 
 
@@ -112,19 +137,8 @@ pre_post |>
   unique()
 
 
-# WARNING: Is that really needed? Maybe we can do everything with the wide data
-df |>
-  tidyr::pivot_longer(
-    cols = c(phq, gad, ucla),
-    names_to = "outcome",
-    values_to = "score",
-    names_transform = \(x) {
-      dplyr::case_match(
-        x,
-        "phq" ~ "PHQ-9",
-        "gad" ~ "GAD-7",
-        "ucla" ~ "UCLA-3"
-      )
-    }
-  ) |>
-  dplyr::arrange(outcome, email)
+# TODO: Update exported clean data after inclusion of demographic info
+pre_post |>
+  readr::write_rds(
+    file = "./data/exported/pre_post.rds"
+  )
