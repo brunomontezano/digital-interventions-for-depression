@@ -120,21 +120,18 @@ pre_post <- df |>
     names_from = "time",
     values_from = "score",
     names_glue = "{dplyr::if_else(time == 0, 'pre', 'post')}"
-  )
-
-
-# FIX: We have 18 subjects from the waiting list that have no sociodemographic
-# data for the descriptive analysis.
-pre_post |>
+  ) |>
+  # NOTE: Include descriptive data for all subjects based on demographic table
   dplyr::left_join(
     y = janitor::clean_names(
       readxl::read_xlsx("./data/aux_data/demog_table.xlsx")
     ),
     by = dplyr::join_by(email == email)
   ) |>
-  dplyr::filter(is.na(ano_de_nascimento)) |>
-  dplyr::pull(email) |>
-  unique()
+  # NOTE: Remove subjects without demographic data from further analysis
+  dplyr::filter(!is.na(ano_de_nascimento)) |>
+  # NOTE: The analyses will be done based on Δ = post - pre
+  dplyr::mutate(delta = post - pre)
 
 
 # TODO: Update exported clean data after inclusion of demographic info
