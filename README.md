@@ -1,4 +1,4 @@
-# Código para "Digital interventions for depressive symptoms: a randomized clinical trial " <a href='https://github.com/brunomontezano/thrive-code/'><img src='assets/phone.jpg' align="right" height="139" /></a>
+# Code for the "Digital interventions for depressive symptoms: a randomized clinical trial" paper <a href='https://github.com/brunomontezano/thrive-code/'><img src='assets/phone.jpg' align="right" height="139" /></a>
 
 This repository contains the code for data analysis related to the manuscript
 "Digital interventions for depressive symptoms: a randomized clinical trial" led
