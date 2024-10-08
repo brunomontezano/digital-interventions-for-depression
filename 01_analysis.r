@@ -64,6 +64,17 @@ df |>
   )
 
 
+# NOTE: Just doing some checks in the t-test to compare GCBT vs. waiting
+# list in anxiety symptomatology (GAD-7)
+t_test_gcbt_wl_gad <- t.test(
+  x = df$delta[df$group == "WL" & df$outcome == "GAD-7"],
+  y = df$delta[df$group == "GCBT" & df$outcome == "GAD-7"],
+  alternative = "greater"
+)
+
+p.adjust(t_test_gcbt_wl_gad$p.value, method = "fdr", n = 2)
+
+
 # NOTE: Create descriptive table for the sample. There is a mutate()
 # call to make some variables more readable and translated
 
@@ -174,3 +185,74 @@ df |>
         include = c(`PHQ-9`, `GAD-7`, `UCLA-3`)
       )
   )
+
+# NOTE: The figure below is a half boxplot and half violin plot, in order to
+# show the changes in pre- and post-treatment data for each treatment arm
+# between the assessments
+
+pre_post_plot <- df |>
+  tidyr::pivot_longer(
+    cols = c(pre, post),
+    names_to = "time",
+    values_to = "score"
+  ) |>
+  dplyr::mutate(time = forcats::fct_recode(
+    time,
+    `Pre-treatment` = "pre",
+    `Post-treatment` = "post"
+  ) |>
+    forcats::fct_rev()) |>
+  ggplot2::ggplot(ggplot2::aes(x = time, y = score, fill = group)) +
+  gghalves::geom_half_boxplot(side = "l") +
+  gghalves::geom_half_violin(side = "r") +
+  ggplot2::scale_y_continuous(limits = c(0, 30), breaks = seq(0, 30, 5)) +
+  ggplot2::facet_wrap(~outcome, scales = "fixed") +
+  ggsci::scale_fill_bmj() +
+  ggplot2::theme_bw(base_size = 20, base_family = "Fira Sans") +
+  ggplot2::labs(x = NULL, y = "Score", fill = "Treatment arm") +
+  ggplot2::theme(
+    legend.position = "top",
+    panel.grid.major.x = ggplot2::element_blank()
+  )
+
+ggplot2::ggsave(
+  plot = pre_post_plot,
+  filename = "./output/plots/pre_post_plot.png",
+  width = 16,
+  height = 9,
+  dpi = 500
+)
+
+# NOTE: In addition, I built a ridges plot. This is basically a combination
+# of density plots to compare distributions between pre-treatment and
+# post-treatment
+
+ridges_treatment <- df |>
+  tidyr::pivot_longer(
+    cols = c(pre, post),
+    names_to = "time",
+    values_to = "score"
+  ) |>
+  dplyr::mutate(time = forcats::fct_recode(
+    time,
+    `Pre-treatment` = "pre",
+    `Post-treatment` = "post"
+  )) |>
+  ggplot2::ggplot(ggplot2::aes(x = score, y = time, fill = group)) +
+  ggridges::geom_density_ridges(scale = 0.9) +
+  ggsci::scale_fill_bmj() +
+  ggplot2::facet_wrap(group ~ outcome, scales = "fixed") +
+  ggridges::theme_ridges(font_family = "Fira Sans", font_size = 20) +
+  ggplot2::labs(x = NULL, y = NULL, fill = NULL) +
+  ggplot2::theme(
+    legend.position = "none",
+    panel.grid.major.x = ggplot2::element_blank()
+  )
+
+ggplot2::ggsave(
+  plot = ridges_treatment,
+  filename = "./output/plots/ridges_treatment.png",
+  width = 16,
+  height = 9,
+  dpi = 500
+)
