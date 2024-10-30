@@ -47,7 +47,7 @@ neq_data <- dplyr::bind_rows(
 # NOTE: NEQ frequency table, in order to show how many subjects experienced
 # a given negative effect during treatment. It is stratified by treatment arm
 # assessment wave
-neq_table_dic <- neq_data |>
+neq_yes_no <- neq_data |>
   dplyr::select(
     group,
     assessment,
@@ -75,7 +75,9 @@ neq_table_dic <- neq_data |>
         )
       }
     ),
-  ) |>
+  )
+
+neq_table_dic <- neq_yes_no |>
   dplyr::rename_with(\(col) stringr::str_replace(col, "neq_", "Item ")) |>
   gtsummary::tbl_strata(
     strata = assessment,
@@ -154,3 +156,48 @@ neq_table_intensity <- neq_data |>
 neq_table_intensity |>
   gtsummary::as_gt() |>
   gt::gtsave("./output/docx/neq_table_intensity.docx")
+
+# NOTE: Plot the NEQ adverse effects in grouped bar plots
+
+neq_freq <- neq_yes_no |>
+  tidyr::pivot_longer(
+    cols = neq_01:neq_20,
+    names_to = "item",
+    values_to = "response",
+    names_transform = readr::parse_number
+  ) |>
+  dplyr::group_by(group, assessment, item) |>
+  dplyr::count(response) |>
+  dplyr::mutate(pct = n / sum(n)) |>
+  dplyr::ungroup() |>
+  dplyr::filter(response == "Yes") |>
+  dplyr::mutate(
+    item = as.factor(item) |> forcats::fct_rev(),
+    assessment = forcats::fct_relevel(
+      assessment, c("Week 12", "Week 8", "Week 4")
+    )
+  )
+
+neq_plot <- neq_freq |>
+  ggplot2::ggplot(ggplot2::aes(x = pct, y = item, fill = assessment)) +
+  ggplot2::geom_col(position = "dodge") +
+  ggplot2::scale_x_continuous(labels = scales::percent) +
+  ggsci::scale_fill_nejm() +
+  ggplot2::geom_vline(xintercept = 0.5, linetype = "dashed", color = "grey20") +
+  ggplot2::facet_wrap(~group) +
+  ggplot2::labs(
+    x = "Reported frequency (%)", y = "NEQ item", fill = "Assessment"
+  ) +
+  ggplot2::theme_bw(20, "Fira Sans") +
+  ggplot2::theme(
+    legend.position = "top",
+    panel.grid.minor.y = ggplot2::element_blank()
+  )
+
+ggplot2::ggsave(
+  plot = neq_plot,
+  filename = "./output/plots/neq_plot.png",
+  dpi = 500,
+  height = 16,
+  width = 9
+)
