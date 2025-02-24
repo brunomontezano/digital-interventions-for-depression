@@ -36,6 +36,46 @@ interacoes <- app_long |>
   ) |>
   dplyr::mutate(adhered = w1 > 0 & w2 > 0 & w3 > 0)
 
+# NOTE: Average interactions for each month?
+
+df |>
+  dplyr::filter(group == "App") |>
+  dplyr::distinct(email) |>
+  dplyr::left_join(interacoes, by = dplyr::join_by(email == email)) |>
+  dplyr::filter(adhered) |>
+  dplyr::summarise(
+    dplyr::across(
+      w1:w3,
+      list(
+        media = mean,
+        dp = sd,
+        min = min,
+        max = max
+      )
+    )
+  )
+
+# NOTE: Average total interactions (during the whole study)
+
+df |>
+  dplyr::filter(group == "App") |>
+  dplyr::distinct(email) |>
+  dplyr::left_join(interacoes, by = dplyr::join_by(email == email)) |>
+  dplyr::filter(adhered) |>
+  dplyr::mutate(total = w1 + w2 + w3) |>
+  dplyr::summarise(
+    dplyr::across(
+      total,
+      list(
+        media = mean,
+        dp = sd,
+        min = min,
+        max = max
+      )
+    )
+  )
+
+
 # NOTE: Calculate how many participants from the App treatment arm actually
 # adhered to treatment based on the criteria (at least one interactions per
 # month)
